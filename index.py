@@ -58,6 +58,47 @@ def buildIndex(dir):
     # for json_file in directory.rglob("*.json"):
     #     print(json_file)
 
+def save_index_to_disk(index, filename):
+    with open(filename, 'w', encoding='utf-8') as f:
+        for token in index.keys():
+            doc_id, tf = index[token]
+            f.write(f"{token}: {doc_id}:{tf}\n")
+    print(f"Saved index to {filename}")
+
+def merge_indexes(partial_indexes, output_filename):
+    merged_index = {}
+    
+    for filename in partial_indexes:
+        with open(filename, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                # Split into token and postings part
+                try:
+                    token, postings_str = line.split(": ", 1)
+                except ValueError:
+                    continue  # skip malformed lines
+                # Each posting is separated by ", " if multiple exist
+                postings = postings_str.split(", ")
+                for posting in postings:
+                    try:
+                        doc_id_str, tf_str = posting.split(":", 1)
+                        doc_id = int(doc_id_str)
+                        tf = float(tf_str)
+                    except ValueError:
+                        continue  # skip malformed postings
+                    if token not in merged_index:
+                        merged_index[token] = []
+                    merged_index[token].append((doc_id, tf))
+    
+    # Write the merged index to the output file in sorted token order.
+    with open(output_filename, 'w', encoding='utf-8') as f:
+        for token in sorted(merged_index.keys()):
+            postings_str = ", ".join(f"{doc_id}:{tf}" for doc_id, tf in merged_index[token])
+            f.write(f"{token}: {postings_str}\n")
+    print(f"Merged index saved to {output_filename}")
+
 def main():
     unique_token_count = 0
 
