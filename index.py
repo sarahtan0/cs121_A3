@@ -59,10 +59,14 @@ def buildIndex(dir):
     #     print(json_file)
 
 def main():
+    unique_token_count = 0
+
     dir = "/home/tans9/121_assignment3/cs121_A3/8ef6d99d9f9264fc84514cdd2e680d35843785310331e1db4bbd06dd2b8eda9b.json"
     inverted = index(dir)
     for word, vals in inverted.items():
+        unique_token_count += 1
         print(word, vals)
+    print("Unique token count: {unique_token_count}")
 
 if __name__ == "__main__":
     main()
