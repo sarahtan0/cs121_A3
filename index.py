@@ -1,9 +1,13 @@
 import json
 from bs4 import BeautifulSoup
 import re
+from pathlib import Path
+from nltk.stem import PorterStemmer
 
 invertedIndex: [str, tuple[int, float]]= {}
 doc_count = 0
+
+#TODO implement stemming
 
 #tokenize all the words in the page
 #add all words to inverted index and posting(docID, tf)
@@ -20,7 +24,6 @@ def parse(file):
         text = remove_html(data["content"])
     
     return text
-
 
 def index(json):
     global doc_count 
@@ -44,8 +47,16 @@ def index(json):
     for word, tf in tf_vals.items():
         invertedIndex[word] = (doc_id, tf)
 
+def buildIndex(dir):
+    directory = Path(dir)
+    # json_files = list(directory.rglob("*.json"))  # Get all JSON files
+    global links
+    for json_file in directory.rglob("*.json"):
+        print(json_file)
+
 def main():
-    index("8ef6d99d9f9264fc84514cdd2e680d35843785310331e1db4bbd06dd2b8eda9b.json")
+    dir = "/home/tans9/121_assignment3/cs121_A3/DEV"
+    buildIndex(dir)
     for word, vals in invertedIndex.items():
         print(word, vals)
 
