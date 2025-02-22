@@ -6,6 +6,7 @@ from nltk.stem import PorterStemmer
 
 invertedIndex: [str, tuple[int, float]]= {}
 doc_count = 0
+ps = PorterStemmer()
 
 #TODO implement stemming
 
@@ -38,26 +39,29 @@ def index(json):
     length = len(tokens)
 
     for token in tokens:
-        if len(token) > 1:
-            freq[token] = freq.get(token, 0) + 1
+        global ps
+        #found in https://www.geeksforgeeks.org/python-stemming-words-with-nltk/
+        stem = ps.stem(token)
+        freq[stem] = freq.get(stem, 0) + 1
     
     for word, count in freq.items():
         tf_vals[word] = count/length
         
     for word, tf in tf_vals.items():
         invertedIndex[word] = (doc_id, tf)
+    
+    return invertedIndex
 
 def buildIndex(dir):
     directory = Path(dir)
-    # json_files = list(directory.rglob("*.json"))  # Get all JSON files
     global links
-    for json_file in directory.rglob("*.json"):
-        print(json_file)
+    # for json_file in directory.rglob("*.json"):
+    #     print(json_file)
 
 def main():
-    dir = "/home/tans9/121_assignment3/cs121_A3/DEV"
-    buildIndex(dir)
-    for word, vals in invertedIndex.items():
+    dir = "/home/tans9/121_assignment3/cs121_A3/8ef6d99d9f9264fc84514cdd2e680d35843785310331e1db4bbd06dd2b8eda9b.json"
+    inverted = index(dir)
+    for word, vals in inverted.items():
         print(word, vals)
 
 if __name__ == "__main__":
