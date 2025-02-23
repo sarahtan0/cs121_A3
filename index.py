@@ -22,8 +22,8 @@ def parse(file):
         data = json.load(file)
 
     if "content" in data:
-        text = remove_html(data["content"])
-    
+        text = BeautifulSoup(data["content"], features="xml").get_text()
+
     return text
 
 def index(json):
