@@ -3,11 +3,10 @@ from bs4 import BeautifulSoup
 import re
 from pathlib import Path
 from nltk.stem import PorterStemmer
+import os
 
-invertedIndex: [str, tuple[int, float]]= {}
 doc_count = 0
 ps = PorterStemmer()
-indexed_docs = 0
 
 #tokenize all the words in the page
 #add all words to inverted index and posting(docID, tf)
@@ -23,9 +22,8 @@ def parse(file):
         
     return text
 
-def index(json):
+def index(json, invertedIndex):
     global doc_count 
-    global invertedIndex
     tf_vals = {}
     freq = {}
 
@@ -48,24 +46,44 @@ def index(json):
         if word not in invertedIndex:
             invertedIndex[word] = []
         invertedIndex[word].append((doc_id, tf))
-    
-    return invertedIndex
 
 def buildIndex(dir):
-    global links
-    global indexed_docs
+    SAVE_THRESHOLD = 1000
+    invertedIndex: [str, tuple[int, float]]= {}
+    file_counter = 0
     directory = Path(dir)
+    partial_indexes = []
+
     for json_file in directory.rglob("*.json"):
-        index(json_file)
-        indexed_docs+=1
-        # print(f"{indexed_docs}/55393")
-    return invertedIndex
+        print("indexing",json_file)
+        index(json_file, invertedIndex)
+        file_counter+=1
+
+        if file_counter % SAVE_THRESHOLD == 0:
+            print("----------------------- WRITING TO DISK ---------------------------")
+            partial_filename = f"partial_index_{len(partial_indexes)}.txt"
+            save_index_to_disk(invertedIndex, partial_filename)
+            partial_indexes.append(partial_filename)
+            invertedIndex.clear()  # removes all elements from a dictionary
+            print("------------------------- CLEARING ------------------------------")
+    # Save any remaining documents if the last batch didn't reach the threshold.
+    if invertedIndex:
+        partial_filename = f"partial_index_{len(partial_indexes)}.txt"
+        save_index_to_disk(invertedIndex, partial_filename)
+        partial_indexes.append(partial_filename)
+        invertedIndex.clear()
+    print(f"Total files processed: {file_counter}")
+    return partial_indexes
 
 def save_index_to_disk(index, filename):
+    new_token = ""
     with open(filename, 'w', encoding='utf-8') as f:
         for token in index.keys():
-            doc_id, tf = index[token]
-            f.write(f"{token}: {doc_id}:{tf}\n")
+            f.write(f"{token}: ")
+            postings = index[token]
+            for posting in postings:
+                f.write(f"{posting[0]}:{posting[1]}, ")
+            f.write("\n")
     print(f"Saved index to {filename}")
 
 def merge_indexes(partial_indexes, output_filename):
@@ -100,17 +118,34 @@ def merge_indexes(partial_indexes, output_filename):
         for token in sorted(merged_index.keys()):
             postings_str = ", ".join(f"{doc_id}:{tf}" for doc_id, tf in merged_index[token])
             f.write(f"{token}: {postings_str}\n")
+    print(f"Unique tokens: {len(merged_index)}")
     print(f"Merged index saved to {output_filename}")
 
 def main():
-    unique_token_count = 0
 
-    dir = "/home/tans9/121_assignment3/cs121_A3/DEV"
-    inverted = buildIndex(dir)
-    for word, vals in inverted.items():
-        unique_token_count += 1
-    # print(f'Unique count: {unique_token_count}')
+    # large file: mondego_ics_uci_edu/7e7ab052f410de3ff187976df4a61e51d50faea14edba3e6d24c15496832dcb7.json
+
+    # """
+    # SIMPLE MAIN IMPLEMENTATIN
+    # """
+    # dir = "/home/tans9/121_assignment3/cs121_A3/DEV"
+    # inverted = buildIndex(dir)
+    # print(f'Unique count: {len(inverted)}')
     # print(f'Total document count: {doc_count}')
+
+    """
+    NEW IMPLEMENTATION OF MAIN
+    """
+    directory = Path("/home/tans9/121_assignment3/cs121_A3/DEV")
+
+    # Process each json file in the directory
+    partial_indexes = buildIndex(directory)    
+    # Merge all the partial indexes into the final index
+    merge_indexes(partial_indexes, "final_index.txt")
+
+    # Prints final index size using os module
+    final_index_size = os.path.getsize("final_index.txt")
+    print(f"Final index size: {final_index_size} bytes")
 
 if __name__ == "__main__":
     main()
