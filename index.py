@@ -7,14 +7,10 @@ from nltk.stem import PorterStemmer
 invertedIndex: [str, tuple[int, float]]= {}
 doc_count = 0
 ps = PorterStemmer()
-
-#TODO implement stemming
+indexed_docs = 0
 
 #tokenize all the words in the page
 #add all words to inverted index and posting(docID, tf)
-def remove_html(html):
-    soup = BeautifulSoup(html, "html.parser")
-    return soup.get_text()
 
 def parse(file):
     text = ""
@@ -22,8 +18,9 @@ def parse(file):
         data = json.load(file)
 
     if "content" in data:
-        text = BeautifulSoup(data["content"], features="xml").get_text()
-
+        #excludes xml
+        text = BeautifulSoup(data["content"], "html.parser").get_text()
+        
     return text
 
 def index(json):
@@ -35,7 +32,7 @@ def index(json):
     doc_count += 1
     doc_id = doc_count
     text = parse(json)
-    tokens = re.findall(r"[a-zA-Z]{2,}", text.lower())
+    tokens = re.findall(r'\b[a-zA-Z0-9]+\b', text.lower())
     length = len(tokens)
 
     for token in tokens:
@@ -48,17 +45,20 @@ def index(json):
         tf_vals[word] = count/length
         
     for word, tf in tf_vals.items():
-        invertedIndex[word] = (doc_id, tf)
+        if word not in invertedIndex:
+            invertedIndex[word] = []
+        invertedIndex[word].append((doc_id, tf))
     
     return invertedIndex
 
 def buildIndex(dir):
+    global links
+    global indexed_docs
     directory = Path(dir)
-    global links, doc_count
     for json_file in directory.rglob("*.json"):
         index(json_file)
-        print("indexed file ",json_file)
-        doc_count += 1
+        indexed_docs+=1
+        # print(f"{indexed_docs}/55393")
     return invertedIndex
 
 def save_index_to_disk(index, filename):
@@ -105,13 +105,12 @@ def merge_indexes(partial_indexes, output_filename):
 def main():
     unique_token_count = 0
 
-    dir = "/home/ssha2/cs121/cs121_A3/analyst"
+    dir = "/home/tans9/121_assignment3/cs121_A3/DEV"
     inverted = buildIndex(dir)
     for word, vals in inverted.items():
         unique_token_count += 1
-        print(word, vals)
-    print(f'Unique count: {unique_token_count}')
-    print(f'Total document count: {doc_count}')
+    # print(f'Unique count: {unique_token_count}')
+    # print(f'Total document count: {doc_count}')
 
 if __name__ == "__main__":
     main()
