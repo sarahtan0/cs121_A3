@@ -48,6 +48,9 @@ def index(json, invertedIndex):
         invertedIndex[word].append((doc_id, tf))
 
 def buildIndex(dir):
+    """
+    Returns a list of all the partial indexes made that contains the save threshold amount of documents worth of tokens each
+    """
     SAVE_THRESHOLD = 1000
     invertedIndex: [str, tuple[int, float]]= {}
     file_counter = 0
@@ -92,21 +95,13 @@ def merge_indexes(partial_indexes, output_filename):
     for filename in partial_indexes:
         with open(filename, 'r', encoding='utf-8') as f:
             for line in f:
-                line = line.strip()
-                if not line:
-                    continue
                 # Split into token and postings part
-                try:
-                    token, postings_str = line.split(": ", 1)
-                except ValueError:
-                    continue  # skip malformed lines
+                token, postings_str = line.split(": ", 1)
                 # Each posting is separated by ", " if multiple exist
                 postings = postings_str.split(", ")
                 for posting in postings:
                     try:
-                        doc_id_str, tf_str = posting.split(":", 1)
-                        doc_id = int(doc_id_str)
-                        tf = float(tf_str)
+                        doc_id, tf = posting.split(":", 1)
                     except ValueError:
                         continue  # skip malformed postings
                     if token not in merged_index:
@@ -124,14 +119,6 @@ def merge_indexes(partial_indexes, output_filename):
 def main():
 
     # large file: mondego_ics_uci_edu/7e7ab052f410de3ff187976df4a61e51d50faea14edba3e6d24c15496832dcb7.json
-
-    # """
-    # SIMPLE MAIN IMPLEMENTATIN
-    # """
-    # dir = "/home/tans9/121_assignment3/cs121_A3/DEV"
-    # inverted = buildIndex(dir)
-    # print(f'Unique count: {len(inverted)}')
-    # print(f'Total document count: {doc_count}')
 
     """
     NEW IMPLEMENTATION OF MAIN
