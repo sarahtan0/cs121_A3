@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 from nltk.stem import PorterStemmer
 import os
+import heapq
 
 doc_count = 0
 ps = PorterStemmer()
@@ -52,12 +53,15 @@ def buildIndex(dir):
     Returns a list of all the partial indexes made that contains the save threshold amount of documents worth of tokens each
     """
     SAVE_THRESHOLD = 1000
+    # max_test_threshold = 3000
     invertedIndex: [str, tuple[int, float]]= {}
     file_counter = 0
     directory = Path(dir)
     partial_indexes = []
 
     for json_file in directory.rglob("*.json"):
+        # if file_counter == max_test_threshold:
+        #     break
         print("indexing",json_file)
         index(json_file, invertedIndex)
         file_counter+=1
@@ -81,7 +85,7 @@ def buildIndex(dir):
 def save_index_to_disk(index, filename):
     new_token = ""
     with open(filename, 'w', encoding='utf-8') as f:
-        for token in index.keys():
+        for token in sorted(index.keys()):
             f.write(f"{token}: ")
             postings = index[token]
             for posting in postings:
@@ -89,33 +93,69 @@ def save_index_to_disk(index, filename):
             f.write("\n")
     print(f"Saved index to {filename}")
 
+# Referenced https://www.geeksforgeeks.org/merge-k-sorted-arrays-set-2-different-sized-arrays/
 def merge_indexes(partial_indexes, output_filename):
-    merged_index = {}
-    
+    # Open all partial index files
+    files = []
     for filename in partial_indexes:
-        with open(filename, 'r', encoding='utf-8') as f:
-            for line in f:
-                # Split into token and postings part
-                token, postings_str = line.split(": ", 1)
-                # Each posting is separated by ", " if multiple exist
-                postings = postings_str.split(", ")
+        f = open(filename, 'r', encoding='utf-8')
+        files.append(f)
+    
+    # Each heap element is a tuple: (token, postings_str, file_index)
+    heap = []
+    for i, f in enumerate(files):
+        line = f.readline()
+        if line:
+            token, postings_str = line.split(": ", 1)
+            heapq.heappush(heap, (token, postings_str, i))
+    
+    with open(output_filename, 'w', encoding='utf-8') as fout:
+        while heap:
+            # Pop the smallest token from the heap.
+            current_token, postings_str, file_idx = heapq.heappop(heap)
+            merged_postings = []
+            
+            # Helper: parse a postings string into a list of (doc_id, tf) tuples.
+            def parse_postings(p_str):
+                postings = [p for p in p_str.split(", ") if p]  # filter out empty strings
+                result = []
                 for posting in postings:
                     try:
                         doc_id, tf = posting.split(":", 1)
+                        result.append((doc_id, tf))
                     except ValueError:
                         continue  # skip malformed postings
-                    if token not in merged_index:
-                        merged_index[token] = []
-                    merged_index[token].append((doc_id, tf))
-    
-    # Write the merged index to the output file in sorted token order.
-    with open(output_filename, 'w', encoding='utf-8') as f:
-        for token in sorted(merged_index.keys()):
-            postings_str = ", ".join(f"{doc_id}:{tf}" for doc_id, tf in merged_index[token])
-            f.write(f"{token}: {postings_str}\n")
-    print(f"Unique tokens: {len(merged_index)}")
-    print(f"Merged index saved to {output_filename}")
+                return result
 
+            # Parse postings from the current popped line.
+            merged_postings.extend(parse_postings(postings_str))
+            
+            # If following elements in the heap have the same token, merge them too.
+            while heap and heap[0][0] == current_token:
+                _, next_postings_str, next_file_idx = heapq.heappop(heap)
+                merged_postings.extend(parse_postings(next_postings_str))
+                # After consuming a line from a file, read its next line.
+                next_line = files[next_file_idx].readline()
+                if next_line:
+                    next_token, next_postings_str = next_line.split(": ", 1)
+                    heapq.heappush(heap, (next_token, next_postings_str, next_file_idx))
+
+            # Write the merged postings for the current token to the output file.
+            merged_postings_str = ", ".join(f"{doc_id}:{tf}" for doc_id, tf in merged_postings)
+            fout.write(f"{current_token}: {merged_postings_str}\n")
+            
+            # Read the next line from the file where the current token came from.
+            next_line = files[file_idx].readline()
+            if next_line:
+                next_line = next_line.strip()
+                next_token, next_postings_str = next_line.split(": ", 1)
+                heapq.heappush(heap, (next_token, next_postings_str, file_idx))
+
+    # Close all files.
+    for f in files:
+        f.close()
+    
+    print(f"Merged index saved to {output_filename}")
 def main():
 
     # large file: mondego_ics_uci_edu/7e7ab052f410de3ff187976df4a61e51d50faea14edba3e6d24c15496832dcb7.json
@@ -123,7 +163,7 @@ def main():
     """
     NEW IMPLEMENTATION OF MAIN
     """
-    directory = Path("/home/tans9/121_assignment3/cs121_A3/DEV")
+    directory = Path("/home/ssha2/cs121/cs121_A3/DEV")
 
     # Process each json file in the directory
     partial_indexes = buildIndex(directory)    
