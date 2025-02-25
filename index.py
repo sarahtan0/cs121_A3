@@ -53,7 +53,7 @@ def buildIndex(dir):
     Returns a list of all the partial indexes made that contains the save threshold amount of documents worth of tokens each
     """
     SAVE_THRESHOLD = 1000
-    # max_test_threshold = 3000
+    # max_test_threshold = 4
     invertedIndex: [str, tuple[int, float]]= {}
     file_counter = 0
     directory = Path(dir)
@@ -94,7 +94,7 @@ def save_index_to_disk(index, filename):
     print(f"Saved index to {filename}")
 
 # Referenced https://www.geeksforgeeks.org/merge-k-sorted-arrays-set-2-different-sized-arrays/
-def merge_indexes(partial_indexes, output_filename):
+def merge_indexes(partial_indexes, output_filename, offset_filename):
     # Open all partial index files
     files = []
     for filename in partial_indexes:
@@ -108,6 +108,8 @@ def merge_indexes(partial_indexes, output_filename):
         if line:
             token, postings_str = line.split(": ", 1)
             heapq.heappush(heap, (token, postings_str, i))
+
+    offset_index = {}
     
     with open(output_filename, 'w', encoding='utf-8') as fout:
         while heap:
@@ -140,6 +142,9 @@ def merge_indexes(partial_indexes, output_filename):
                     next_token, next_postings_str = next_line.split(": ", 1)
                     heapq.heappush(heap, (next_token, next_postings_str, next_file_idx))
 
+            offset = fout.tell()
+            offset_index[current_token] = offset
+
             # Write the merged postings for the current token to the output file.
             merged_postings_str = ", ".join(f"{doc_id}:{tf}" for doc_id, tf in merged_postings)
             fout.write(f"{current_token}: {merged_postings_str}\n")
@@ -154,8 +159,12 @@ def merge_indexes(partial_indexes, output_filename):
     # Close all files.
     for f in files:
         f.close()
+
+    with open(offset_filename, 'w', encoding='utf-8') as f_offset:
+        json.dump(offset_index, f_offset)
     
     print(f"Merged index saved to {output_filename}")
+    print(f"Offset index saved to {offset_filename}")
 def main():
 
     # large file: mondego_ics_uci_edu/7e7ab052f410de3ff187976df4a61e51d50faea14edba3e6d24c15496832dcb7.json
@@ -168,7 +177,7 @@ def main():
     # Process each json file in the directory
     partial_indexes = buildIndex(directory)    
     # Merge all the partial indexes into the final index
-    merge_indexes(partial_indexes, "final_index.txt")
+    merge_indexes(partial_indexes, "final_index.txt", "final_offset.json")
 
     # Prints final index size using os module
     final_index_size = os.path.getsize("final_index.txt")
