@@ -13,24 +13,44 @@ ps = PorterStemmer()
 #add all words to inverted index and posting(docID, tf)
 
 def parse(file):
+    important_text = set()
     text = ""
     with open(file, 'r') as file:
         data = json.load(file)
 
     if "content" in data:
         #excludes xml
-        text = BeautifulSoup(data["content"], "html.parser").get_text()
-        
-    return text
+        soup = BeautifulSoup(data["content"], "html.parser")
+        important_text.update(extract_words("title", soup))
+        important_text.update(extract_words("h1", soup))
+        important_text.update(extract_words("h2", soup))
+        important_text.update(extract_words("h3", soup))
+        text = soup.get_text()
+        print("IMPORTANT WORDS:",important_text)
+    return (text, important_text) #returns all text and a set of important words
+
+def extract_words(type, soup):
+    global ps
+    words = set()
+    tag_lines = soup.find_all(type)
+    for tag in tag_lines:
+        #tag is a list of lines with the tags INCLUDING tags
+        for word in tag.text.split():
+            words.add(ps.stem(word))
+    return words
 
 def index(json, invertedIndex):
     global doc_count 
+    #value that frequency will be multiplied by for important words
+    IMPORTANT_MULTIPLIER = 3 
+    
     tf_vals = {}
     freq = {}
+    important_text = set()
 
     doc_count += 1
     doc_id = doc_count
-    text = parse(json)
+    text, important_text = parse(json)
     tokens = re.findall(r'\b[a-zA-Z0-9]+\b', text.lower())
     length = len(tokens)
 
@@ -42,6 +62,9 @@ def index(json, invertedIndex):
     
     for word, count in freq.items():
         tf_vals[word] = count/length
+        if word in important_text:
+            print(f"{word} found in important text")
+            tf_vals[word] *= IMPORTANT_MULTIPLIER
         
     for word, tf in tf_vals.items():
         if word not in invertedIndex:
@@ -53,15 +76,19 @@ def buildIndex(dir):
     Returns a list of all the partial indexes made that contains the save threshold amount of documents worth of tokens each
     """
     SAVE_THRESHOLD = 1000
-    # max_test_threshold = 4
+
+    max_test_threshold = 4
+
     invertedIndex: [str, tuple[int, float]]= {}
     file_counter = 0
     directory = Path(dir)
     partial_indexes = []
 
     for json_file in directory.rglob("*.json"):
+        # TESTING
         # if file_counter == max_test_threshold:
         #     break
+        #TESTING
         print("indexing",json_file)
         index(json_file, invertedIndex)
         file_counter+=1
@@ -172,12 +199,13 @@ def main():
     """
     NEW IMPLEMENTATION OF MAIN
     """
-    directory = Path("/home/ssha2/cs121/cs121_A3/DEV")
+    # directory = Path("/home/tans9/121_assignment3/cs121_A3/DEV")
+    directory = Path("/home/tans9/121_assignment3/cs121_A3/DEV")
 
     # Process each json file in the directory
     partial_indexes = buildIndex(directory)    
     # Merge all the partial indexes into the final index
-    merge_indexes(partial_indexes, "final_index.txt", "final_offset.json")
+    merge_indexes(partial_indexes, "final_new.txt", "final_offset.json")
 
     # Prints final index size using os module
     final_index_size = os.path.getsize("final_index.txt")
