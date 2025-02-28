@@ -211,7 +211,28 @@ def calc_idfs(final_index_filename):
     temp_path = final_index_filename + ".tmp" # need a temp file bc you cant rewrite a specific line
     
     # opening final_index.txt for reading and temp file for writing
-    w 
+    with open(final_index_filename, 'r', encoding='utf-8') as fin, \
+         open(temp_path, 'w', encoding='utf-8') as fout:
+        for line in fin:
+            line = line.strip()
+            try:
+                token, postings_str = line.split(": ", 1)
+            except ValueError:
+                continue
+            
+            # splits the postings. "if p" removes the last empty posting since the line ends w ", "
+            postings = [p for p in postings_str.split(", ") if p]
+            df = len(postings)
+
+            # calculate idf using math module, chat 
+            idf = math.log(total_docs / df)
+            
+            # recreate the old line with the idf added to the end.
+            fout.write(f"{token}: {postings_str} ; {idf}\n")
+    
+    # file replace using os.
+    os.replace(temp_path, final_index_filename)
+    print(f"Updated final index with IDFs in {final_index_filename}")
 
 def main():
 
