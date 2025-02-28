@@ -5,6 +5,7 @@ from pathlib import Path
 from nltk.stem import PorterStemmer
 import os
 import heapq
+import math
 
 doc_count = 0
 ps = PorterStemmer()
@@ -21,12 +22,15 @@ def parse(file):
     if "content" in data:
         #excludes xml
         soup = BeautifulSoup(data["content"], "html.parser")
+
+        #makes list of important words
         important_text.update(extract_words("title", soup))
         important_text.update(extract_words("h1", soup))
         important_text.update(extract_words("h2", soup))
         important_text.update(extract_words("h3", soup))
+        important_text.update(extract_words("b", soup))
+
         text = soup.get_text()
-        print("IMPORTANT WORDS:",important_text)
     return (text, important_text) #returns all text and a set of important words
 
 def extract_words(type, soup):
@@ -63,7 +67,6 @@ def index(json, invertedIndex):
     for word, count in freq.items():
         tf_vals[word] = count/length
         if word in important_text:
-            print(f"{word} found in important text")
             tf_vals[word] *= IMPORTANT_MULTIPLIER
         
     for word, tf in tf_vals.items():
@@ -79,7 +82,7 @@ def buildIndex(dir):
 
     max_test_threshold = 4
 
-    invertedIndex: [str, tuple[int, float]]= {}
+    invertedIndex Dict[str, list[tuple(str, int)], float] = {}
     file_counter = 0
     directory = Path(dir)
     partial_indexes = []
@@ -115,13 +118,13 @@ def save_index_to_disk(index, filename):
         for token in sorted(index.keys()):
             f.write(f"{token}: ")
             postings = index[token]
-            for posting in postings:
-                f.write(f"{posting[0]}:{posting[1]}, ")
-            f.write("\n")
+            postings_str = ", ".join(f"{doc_id}:{tf}" for doc_id, tf in postings)
+            f.write(f"{token}: {postings_str}\n")
     print(f"Saved index to {filename}")
 
 # Referenced https://www.geeksforgeeks.org/merge-k-sorted-arrays-set-2-different-sized-arrays/
 def merge_indexes(partial_indexes, output_filename, offset_filename):
+    global doc_count
     # Open all partial index files
     files = []
     for filename in partial_indexes:
@@ -169,6 +172,8 @@ def merge_indexes(partial_indexes, output_filename, offset_filename):
                     next_token, next_postings_str = next_line.split(": ", 1)
                     heapq.heappush(heap, (next_token, next_postings_str, next_file_idx))
 
+            idf = 
+
             offset = fout.tell()
             offset_index[current_token] = offset
 
@@ -192,6 +197,22 @@ def merge_indexes(partial_indexes, output_filename, offset_filename):
     
     print(f"Merged index saved to {output_filename}")
     print(f"Offset index saved to {offset_filename}")
+
+def calc_idfs(final_index_filename):
+    """
+    new index line format. idf applies to the token and not posting,
+    so i just added it to the end of the line w a semicolon so its easy to split
+
+    token: doc_id1:tf1, doc_id2:tf2, ... ; idf_value
+    """
+    global doc_count  # total docs
+    total_docs = doc_count 
+    
+    temp_path = final_index_filename + ".tmp" # need a temp file bc you cant rewrite a specific line
+    
+    # opening final_index.txt for reading and temp file for writing
+    w 
+
 def main():
 
     # large file: mondego_ics_uci_edu/7e7ab052f410de3ff187976df4a61e51d50faea14edba3e6d24c15496832dcb7.json
@@ -205,7 +226,7 @@ def main():
     # Process each json file in the directory
     partial_indexes = buildIndex(directory)    
     # Merge all the partial indexes into the final index
-    merge_indexes(partial_indexes, "final_new.txt", "final_offset.json")
+    merged = merge_indexes(partial_indexes, "final_new.txt", "final_offset.json")
 
     # Prints final index size using os module
     final_index_size = os.path.getsize("final_index.txt")
