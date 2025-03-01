@@ -27,12 +27,14 @@ def retrieve(word):
     
     mem_map.seek(word_offset)
     line = mem_map.readline().decode('utf-8')  # decode bytes to str
+    # print("LINE: ", line)
     return line
 
 if __name__ == "__main__":
     start_time = time.perf_counter()
-    query_list = tokenize_query("masters of software engineering")
+    query_list = tokenize_query("difficult digit")
     for token in query_list:
         result = retrieve(token)
+        print(f"OUTPUT: {result}")
     elapsed = (time.perf_counter() - start_time) * 1000  # in ms
     print(f"Elapsed time: {elapsed:.2f} ms")
