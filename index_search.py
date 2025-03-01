@@ -79,6 +79,7 @@ def compute_doc_scores(query_vector, doc_vectors):
 
 if __name__ == "__main__":
     start_time = time.perf_counter()
+<<<<<<< HEAD
     
     # tokenize query.
     query = "masters of software engineering"
@@ -119,4 +120,11 @@ if __name__ == "__main__":
         print(f"Document ID: {doc_id}, Score: {score:.4f}")
     
     elapsed = (time.perf_counter() - start_time) * 1000  # in milliseconds
+=======
+    query_list = tokenize_query("software ")
+    for token in query_list:
+        result = retrieve(token)
+        print(f"OUTPUT: {result}")
+    elapsed = (time.perf_counter() - start_time) * 1000  # in ms
+>>>>>>> 6d333209e97f2e2d6ffdafe1c9ba65b98352aff7
     print(f"Elapsed time: {elapsed:.2f} ms")
