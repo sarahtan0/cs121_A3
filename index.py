@@ -79,9 +79,9 @@ def buildIndex(dir):
     """
     Returns a list of all the partial indexes made that contains the save threshold amount of documents worth of tokens each
     """
-    SAVE_THRESHOLD = 1000
+    SAVE_THRESHOLD = 2
 
-    # max_test_threshold = 4
+    max_test_threshold = 4
 
     invertedIndex = {}
     file_counter = 0
@@ -90,8 +90,8 @@ def buildIndex(dir):
 
     for json_file in directory.rglob("*.json"):
         # TESTING
-        # if file_counter == max_test_threshold:
-        #     break
+        if file_counter == max_test_threshold:
+            break
         #TESTING
         print("indexing",json_file)
         index(json_file, invertedIndex)
@@ -247,7 +247,7 @@ def create_offset_index(final_index_filename, offset_filename):
     print(f"Offset index saved to {offset_filename}")
 
 def main():
-    directory = Path("/home/ssha2/cs121/cs121_A3/DEV")
+    directory = Path("/home/tans9/121_assignment3/cs121_A3/DEV")
     # directory = Path("/home/ssha2/cs121/cs121_A3/DEV")
     partial_indexes = buildIndex(directory)
     
