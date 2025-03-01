@@ -106,7 +106,7 @@ def buildIndex(dir):
             print("------------------------- CLEARING ------------------------------")
     # Save any remaining documents if the last batch didn't reach the threshold.
     if invertedIndex:
-        partial_filename = f"partial_index_{len(partial_indexes)}.txt"
+        partial_filename = f"indexes/partial_index_{len(partial_indexes)}.txt"
         save_index_to_disk(invertedIndex, partial_filename)
         partial_indexes.append(partial_filename)
         invertedIndex.clear()
