@@ -67,6 +67,7 @@ def index(json, invertedIndex):
     for word, count in freq.items():
         tf_vals[word] = count/length
         if word in important_text:
+            # print(f"{word} found in important text")
             tf_vals[word] *= IMPORTANT_MULTIPLIER
         
     for word, tf in tf_vals.items():
@@ -78,9 +79,9 @@ def buildIndex(dir):
     """
     Returns a list of all the partial indexes made that contains the save threshold amount of documents worth of tokens each
     """
-    SAVE_THRESHOLD = 2
+    SAVE_THRESHOLD = 1000
 
-    max_test_threshold = 4
+    # max_test_threshold = 4
 
     invertedIndex = {}
     file_counter = 0
@@ -89,8 +90,8 @@ def buildIndex(dir):
 
     for json_file in directory.rglob("*.json"):
         # TESTING
-        if file_counter == max_test_threshold:
-            break
+        # if file_counter == max_test_threshold:
+        #     break
         #TESTING
         print("indexing",json_file)
         index(json_file, invertedIndex)
@@ -98,7 +99,7 @@ def buildIndex(dir):
 
         if file_counter % SAVE_THRESHOLD == 0:
             print("----------------------- WRITING TO DISK ---------------------------")
-            partial_filename = f"partial_index_{len(partial_indexes)}.txt"
+            partial_filename = f"indexes/partial_index_{len(partial_indexes)}.txt"
             save_index_to_disk(invertedIndex, partial_filename)
             partial_indexes.append(partial_filename)
             invertedIndex.clear()  # removes all elements from a dictionary
@@ -137,9 +138,8 @@ def merge_indexes(partial_indexes, output_filename, offset_filename):
         if line:
             token, postings_str = line.split(": ", 1)
             heapq.heappush(heap, (token, postings_str, i))
-
-    offset_index = {}
     
+    # Removed offset index building from here.
     with open(output_filename, 'w', encoding='utf-8') as fout:
         while heap:
             # Pop the smallest token from the heap.
@@ -171,9 +171,6 @@ def merge_indexes(partial_indexes, output_filename, offset_filename):
                     next_token, next_postings_str = next_line.split(": ", 1)
                     heapq.heappush(heap, (next_token, next_postings_str, next_file_idx))
 
-            offset = fout.tell()
-            offset_index[current_token] = offset
-
             # Write the merged postings for the current token to the output file.
             merged_postings_str = ", ".join(f"{doc_id}:{tf}" for doc_id, tf in merged_postings)
             fout.write(f"{current_token}: {merged_postings_str}\n")
@@ -189,11 +186,7 @@ def merge_indexes(partial_indexes, output_filename, offset_filename):
     for f in files:
         f.close()
 
-    with open(offset_filename, 'w', encoding='utf-8') as f_offset:
-        json.dump(offset_index, f_offset)
-    
     print(f"Merged index saved to {output_filename}")
-    print(f"Offset index saved to {offset_filename}")
 
 def calc_idfs(final_index_filename):
     """
@@ -204,7 +197,6 @@ def calc_idfs(final_index_filename):
     """
     global doc_count  # total docs
     total_docs = doc_count 
-    
     temp_path = final_index_filename + ".tmp" # need a temp file bc you cant rewrite a specific line
     
     # opening final_index.txt for reading and temp file for writing
@@ -216,7 +208,6 @@ def calc_idfs(final_index_filename):
                 token, postings_str = line.split(": ", 1)
             except ValueError:
                 continue
-            
             # splits the postings. "if p" removes the last empty posting since the line ends w ", "
             postings = [p for p in postings_str.split(", ") if p]
             df = len(postings)
@@ -231,22 +222,44 @@ def calc_idfs(final_index_filename):
     os.replace(temp_path, final_index_filename)
     print(f"Updated final index with IDFs in {final_index_filename}")
 
+def create_offset_index(final_index_filename, offset_filename):
+    """
+    Reads the final index file (which now includes the IDF) and creates an offset index mapping
+    each token to its byte offset in the final index file.
+    """
+    offset_index = {}
+    with open(final_index_filename, 'r', encoding='utf-8') as fin:
+        while True:
+            offset = fin.tell()
+            line = fin.readline()
+            if not line:
+                break
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                token, _ = line.split(": ", 1)
+            except ValueError:
+                continue
+            offset_index[token] = offset
+    with open(offset_filename, 'w', encoding='utf-8') as f_offset:
+        json.dump(offset_index, f_offset)
+    print(f"Offset index saved to {offset_filename}")
+
 def main():
-
-    # large file: mondego_ics_uci_edu/7e7ab052f410de3ff187976df4a61e51d50faea14edba3e6d24c15496832dcb7.json
-
-    """
-    NEW IMPLEMENTATION OF MAIN
-    """
-    # directory = Path("/home/tans9/121_assignment3/cs121_A3/DEV")
-    directory = Path("/home/tans9/121_assignment3/cs121_A3/DEV")
-
-    # Process each json file in the directory
-    partial_indexes = buildIndex(directory)    
-    # Merge all the partial indexes into the final index
-    merged = merge_indexes(partial_indexes, "final_index.txt", "final_offset.json")
-
-    # Prints final index size using os module
+    directory = Path("/home/ssha2/cs121/cs121_A3/DEV")
+    # directory = Path("/home/ssha2/cs121/cs121_A3/DEV")
+    partial_indexes = buildIndex(directory)
+    
+    # Merge all the partial indexes into the final index (without offsets)
+    merge_indexes(partial_indexes, "final_index.txt", "final_offset.json")
+    
+    # Append IDF values to final_index.txt
+    calc_idfs("final_index.txt")
+    
+    # Create the offset index from the updated final index.
+    create_offset_index("final_index.txt", "final_offset.json")
+    
     final_index_size = os.path.getsize("final_index.txt")
     print(f"Final index size: {final_index_size} bytes")
 
