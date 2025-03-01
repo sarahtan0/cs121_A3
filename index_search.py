@@ -32,7 +32,7 @@ def retrieve(word):
 
 if __name__ == "__main__":
     start_time = time.perf_counter()
-    query_list = tokenize_query("monday network")
+    query_list = tokenize_query("software ")
     for token in query_list:
         result = retrieve(token)
         print(f"OUTPUT: {result}")
