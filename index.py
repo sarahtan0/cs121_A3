@@ -78,19 +78,19 @@ def buildIndex(dir):
     """
     Returns a list of all the partial indexes made that contains the save threshold amount of documents worth of tokens each
     """
-    SAVE_THRESHOLD = 1000
+    SAVE_THRESHOLD = 2
 
     max_test_threshold = 4
 
-    invertedIndex Dict[str, list[tuple(str, int)], float] = {}
+    invertedIndex = {}
     file_counter = 0
     directory = Path(dir)
     partial_indexes = []
 
     for json_file in directory.rglob("*.json"):
         # TESTING
-        # if file_counter == max_test_threshold:
-        #     break
+        if file_counter == max_test_threshold:
+            break
         #TESTING
         print("indexing",json_file)
         index(json_file, invertedIndex)
@@ -116,7 +116,6 @@ def save_index_to_disk(index, filename):
     new_token = ""
     with open(filename, 'w', encoding='utf-8') as f:
         for token in sorted(index.keys()):
-            f.write(f"{token}: ")
             postings = index[token]
             postings_str = ", ".join(f"{doc_id}:{tf}" for doc_id, tf in postings)
             f.write(f"{token}: {postings_str}\n")
@@ -171,8 +170,6 @@ def merge_indexes(partial_indexes, output_filename, offset_filename):
                 if next_line:
                     next_token, next_postings_str = next_line.split(": ", 1)
                     heapq.heappush(heap, (next_token, next_postings_str, next_file_idx))
-
-            idf = 
 
             offset = fout.tell()
             offset_index[current_token] = offset
@@ -247,7 +244,7 @@ def main():
     # Process each json file in the directory
     partial_indexes = buildIndex(directory)    
     # Merge all the partial indexes into the final index
-    merged = merge_indexes(partial_indexes, "final_new.txt", "final_offset.json")
+    merged = merge_indexes(partial_indexes, "final_index.txt", "final_offset.json")
 
     # Prints final index size using os module
     final_index_size = os.path.getsize("final_index.txt")
