@@ -4,3 +4,4 @@ indexes/
 1_small_offset.json
 final_index.txt
 final_offset.json
+doc_mapping.json

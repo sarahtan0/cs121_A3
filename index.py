@@ -9,6 +9,8 @@ import math
 
 doc_count = 0
 ps = PorterStemmer()
+# New global mapping to store doc_id -> url
+doc_id_to_url = {}
 
 #tokenize all the words in the page
 #add all words to inverted index and posting(docID, tf)
@@ -16,9 +18,11 @@ ps = PorterStemmer()
 def parse(file):
     important_text = set()
     text = ""
+    url = ""
     with open(file, 'r') as file:
         data = json.load(file)
-
+    # Extract the url from the JSON
+    url = data.get("url", "")
     if "content" in data:
         #excludes xml
         soup = BeautifulSoup(data["content"], "html.parser")
@@ -31,7 +35,8 @@ def parse(file):
         important_text.update(extract_words("b", soup))
 
         text = soup.get_text()
-    return (text, important_text) #returns all text and a set of important words
+    # Return text, important words, and the extracted URL
+    return (text, important_text, url)
 
 def extract_words(type, soup):
     global ps
@@ -43,7 +48,7 @@ def extract_words(type, soup):
             words.add(ps.stem(word))
     return words
 
-def index(json, invertedIndex):
+def index(json_file, invertedIndex):
     global doc_count 
     #value that frequency will be multiplied by for important words
     IMPORTANT_MULTIPLIER = 3 
@@ -54,7 +59,10 @@ def index(json, invertedIndex):
 
     doc_count += 1
     doc_id = doc_count
-    text, important_text = parse(json)
+    # Update call to parse to also get the URL.
+    text, important_text, url = parse(json_file)
+    # Save the URL in the mapping.
+    doc_id_to_url[doc_id] = url
     tokens = re.findall(r'\b[a-zA-Z0-9]+\b', text.lower())
     length = len(tokens)
 
@@ -79,9 +87,9 @@ def buildIndex(dir):
     """
     Returns a list of all the partial indexes made that contains the save threshold amount of documents worth of tokens each
     """
-    SAVE_THRESHOLD = 2
+    SAVE_THRESHOLD = 1000
 
-    max_test_threshold = 4
+    # max_test_threshold = 4
 
     invertedIndex = {}
     file_counter = 0
@@ -90,12 +98,12 @@ def buildIndex(dir):
 
     for json_file in directory.rglob("*.json"):
         # TESTING
-        if file_counter == max_test_threshold:
-            break
+        # if file_counter == max_test_threshold:
+        #     break
         #TESTING
-        print("indexing",json_file)
+        print("indexing", json_file)
         index(json_file, invertedIndex)
-        file_counter+=1
+        file_counter += 1
 
         if file_counter % SAVE_THRESHOLD == 0:
             print("----------------------- WRITING TO DISK ---------------------------")
@@ -247,8 +255,8 @@ def create_offset_index(final_index_filename, offset_filename):
     print(f"Offset index saved to {offset_filename}")
 
 def main():
-    directory = Path("/home/tans9/121_assignment3/cs121_A3/DEV")
-    # directory = Path("/home/ssha2/cs121/cs121_A3/DEV")
+    # directory = Path("/home/tans9/121_assignment3/cs121_A3/DEV")
+    directory = Path("/home/ssha2/cs121/cs121_A3/DEV")
     partial_indexes = buildIndex(directory)
     
     # Merge all the partial indexes into the final index (without offsets)
@@ -259,6 +267,10 @@ def main():
     
     # Create the offset index from the updated final index.
     create_offset_index("final_index.txt", "final_offset.json")
+    
+    # Write the document URL mapping to disk
+    with open('doc_mapping.json', 'w', encoding='utf-8') as map_file:
+        json.dump(doc_id_to_url, map_file)
     
     final_index_size = os.path.getsize("final_index.txt")
     print(f"Final index size: {final_index_size} bytes")
