@@ -89,8 +89,11 @@ def retrieve_original_document(doc_id):
     # The keys in the mapping might be strings, so convert the doc_id to a string.
     return doc_mapping.get(str(doc_id))
 
-if __name__ == "__main__":
-    query = input("Type your query and press Enter: ")
+def search(user_query):
+    # query = input("Type your query and press Enter: ")
+    top_results = []
+
+    query = user_query
     start_time = time.perf_counter()
     query_tokens = tokenize_query(query)
     query_counts = {}
@@ -124,15 +127,21 @@ if __name__ == "__main__":
 
     # Retrieve the top 5 documents based on cosine similarity.
     top_docs = sorted(doc_scores.items(), key=lambda x: x[1], reverse=True)[:5]
-    
+
     for doc_id, score in top_docs:
         print(f"Document ID: {doc_id}, Score: {score:.4f}")
         url = retrieve_original_document(doc_id)
         if url:
             print("URL:", url)
+            top_results.append(url)
         else:
             print("URL not found for doc_id", doc_id)
         print("-" * 50)
     
     elapsed = (time.perf_counter() - start_time) * 1000  # in milliseconds
     print(f"Elapsed time: {elapsed:.2f} ms")
+
+    return top_results
+
+if __name__ == "__main__":
+    run()
