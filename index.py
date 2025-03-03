@@ -255,7 +255,7 @@ def create_offset_index(final_index_filename, offset_filename):
     print(f"Offset index saved to {offset_filename}")
 
 def main():
-    directory = Path("/home/tans9/121_assignment3/cs121_A3/DEV")
+    directory = Path("/Users/sarah/Downloads/DEV")
     # directory = Path("/home/ssha2/cs121/cs121_A3/DEV")
     partial_indexes = buildIndex(directory)
     

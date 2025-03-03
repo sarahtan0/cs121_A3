@@ -90,6 +90,7 @@ def retrieve_original_document(doc_id):
     return doc_mapping.get(str(doc_id))
 
 def search(user_query):
+    print(user_query)
     # query = input("Type your query and press Enter: ")
     top_results = []
 
@@ -129,14 +130,13 @@ def search(user_query):
     top_docs = sorted(doc_scores.items(), key=lambda x: x[1], reverse=True)[:5]
 
     for doc_id, score in top_docs:
-        print(f"Document ID: {doc_id}, Score: {score:.4f}")
+        # print(f"Document ID: {doc_id}, Score: {score:.4f}")
         url = retrieve_original_document(doc_id)
         if url:
-            print("URL:", url)
+            # print("URL:", url)
             top_results.append(url)
         else:
             print("URL not found for doc_id", doc_id)
-        print("-" * 50)
     
     elapsed = (time.perf_counter() - start_time) * 1000  # in milliseconds
     print(f"Elapsed time: {elapsed:.2f} ms")
@@ -144,4 +144,5 @@ def search(user_query):
     return top_results
 
 if __name__ == "__main__":
-    run()
+    query = input("Type your query and press Enter: ")
+    search(query)
