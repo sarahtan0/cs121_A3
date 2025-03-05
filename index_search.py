@@ -90,7 +90,7 @@ def retrieve_original_document(doc_id):
     return doc_mapping.get(str(doc_id))
 
 def search(user_query):
-    print(user_query)
+    print(user_query, "\n----------")
     # query = input("Type your query and press Enter: ")
     top_results = []
 
