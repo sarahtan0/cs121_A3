@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeSearch</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}"/>
+</head>
+<body>
+    <div class="search">
+        <h1>LeSearch</h1>
+        <form action="/" method="POST">
+            <input class="input" type="text" name="query" placeholder="Enter search term" required>
+            <button type="submit">Search</button>
+        </form>
+    </div>
+</body>
+</html>

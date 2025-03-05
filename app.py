@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, render_template
 from index_search import search
 # from flask_wtf.csrf import CSRFProtect
 
@@ -6,7 +6,6 @@ app = Flask(__name__)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    html_content = "<h1>Results</h1>"
     results = []
     query = ""
 
@@ -17,19 +16,10 @@ def index():
 
         results = search(query)  # Run the search function
 
-    for result in results:
-        html_content+=f"<a href='{result}'>{result}</a><br>"
-
     if results:
-        return html_content
+        return render_template('results.html', results=results)
     else:
-        return f'''
-        <h1>LeSearch</h1>
-        <form action="/" method="POST">
-            <input type="text" name="query" placeholder="Enter search term" value="{query}" required>
-            <button type="submit">Search</button>
-        </form>
-        ''' # Initial page load
+        return render_template('index.html')
 
 if __name__ == '__main__':
     app.run(debug=True)
