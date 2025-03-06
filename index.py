@@ -51,7 +51,7 @@ def extract_words(type, soup):
 def index(json_file, invertedIndex):
     global doc_count 
     #value that frequency will be multiplied by for important words
-    IMPORTANT_MULTIPLIER = 3 
+    IMPORTANT_MULTIPLIER = 5
     
     tf_vals = {}
     freq = {}
