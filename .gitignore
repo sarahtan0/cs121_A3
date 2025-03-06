@@ -5,3 +5,4 @@ indexes/
 final_index.txt
 final_offset.json
 doc_mapping.json
+__pycache__
