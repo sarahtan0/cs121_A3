@@ -1,0 +1,44 @@
+html, body{
+    font-family: "Comic Sans MS", "Comic Sans", cursive;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background-image: url("https://images8.alphacoders.com/127/1279081.jpg");
+    background-size: 105%; /* Ensures full image is visible */  
+}
+
+p{
+    font-size: 75px;
+    margin: 20px;
+}
+
+.search{
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.input{
+    width: 60vw;
+    height: 50%;
+    padding: 10px;
+    font-size: 16px;
+    font-family: "Comic Sans MS", "Comic Sans", cursive;
+}
+
+form {
+    display: flex; /* Enables flexbox */
+    align-items: center; /* Aligns input and button vertically */
+    gap: 10px; 
+    width: 100%; /* Ensures it takes full width */
+    max-width: 500px; /* Optional: limit form width */
+}
+
+button {
+    padding: 10px 20px;
+    font-size: 16px;
+    font-family: "Comic Sans MS", "Comic Sans", cursive;
+}
