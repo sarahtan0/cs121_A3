@@ -4,7 +4,7 @@ import time
 import re
 import math
 from collections import Counter
-from nltk.stem import PorterStemmer
+from nltk.stem import SnowballStemmer
 
 # Load the offset index and the document mapping (which now contains URLs),
 # and create a memory mapped file for the final index.
@@ -18,7 +18,7 @@ with open('final_index.txt', 'r') as i_file:
     mem_map = mmap.mmap(i_file.fileno(), 0, access=mmap.ACCESS_READ)
 
 def tokenize_query(query):
-    ps = PorterStemmer()   
+    ps = SnowballStemmer("english")   # Using SnowballStemmer for English
     tokens = re.findall(r'\b[a-zA-Z0-9]+\b', query.lower())
     return [ps.stem(token) for token in tokens]
 
@@ -59,48 +59,38 @@ def parse_index_line(line):
         idf = 0.0
     return postings, idf
 
-def cosine_similarity(vec1, vec2):
-    """
-    Computes cosine similarity between two vectors represented as dictionaries.
-    """
-    dot_product = sum(vec1.get(token, 0) * vec2.get(token, 0)
-                      for token in set(vec1.keys()).intersection(vec2.keys()))
-    norm1 = math.sqrt(sum(value ** 2 for value in vec1.values()))
-    norm2 = math.sqrt(sum(value ** 2 for value in vec2.values()))
-    if norm1 == 0 or norm2 == 0:
-        return 0.0
-    return dot_product / (norm1 * norm2)
-
 def compute_doc_scores(query_vector, doc_vectors):
     """
-    Given a query vector and a dictionary of document vectors,
-    compute the cosine similarity for each document.
-    Returns a dictionary mapping doc_id to cosine similarity score.
+    calc cosine similarity by document
     """
     scores = {}
+    # Calculate the norm of the query vector.
+    query_norm = math.sqrt(sum(weight ** 2 for weight in query_vector.values()))
     for doc_id, doc_vector in doc_vectors.items():
-        scores[doc_id] = cosine_similarity(query_vector, doc_vector)
+        # Compute dot product of query and document vectors.
+        dot_product = sum(query_vector.get(token, 0) * doc_vector.get(token, 0)
+                          for token in query_vector)
+        # Compute norm of the document vector.
+        doc_norm = math.sqrt(sum(weight ** 2 for weight in doc_vector.values()))
+        if query_norm == 0 or doc_norm == 0:
+            scores[doc_id] = 0.0
+        else:
+            scores[doc_id] = dot_product / (query_norm * doc_norm)
     return scores
 
 def retrieve_original_document(doc_id):
     """
     Given a document ID, look up its URL using the doc_mapping and return it.
     """
-    # The keys in the mapping might be strings, so convert the doc_id to a string.
     return doc_mapping.get(str(doc_id))
 
-def search(user_query):
-    print(user_query, "\n----------")
-    # query = input("Type your query and press Enter: ")
-    top_results = []
-
-    query = user_query
+if __name__ == "__main__":
+    query = input("Type your query and press Enter: ")
     start_time = time.perf_counter()
     query_tokens = tokenize_query(query)
     query_counts = {}
     for token in query_tokens:
         query_counts[token] = query_counts.get(token, 0) + 1
-    total_query_terms = sum(query_counts.values())
     
     # Build the query vector and the document vectors.
     query_vector = {}
@@ -111,38 +101,35 @@ def search(user_query):
         if not line:
             continue  # Token not found in index.
         postings, idf = parse_index_line(line)
-        # Compute normalized query term frequency and its weight.
-        query_tf = count / total_query_terms
-        query_weight = query_tf * idf
+        # For Boolean search, give each query token a weight equal to its idf.
+        query_weight = idf
         query_vector[token] = query_weight
         
-        # For each document that has this token, update its vector.
+        # For each document that contains this token, update its vector.
         for doc_id, tf in postings.items():
             doc_weight = tf * idf
             if doc_id not in doc_vectors:
                 doc_vectors[doc_id] = {}
             doc_vectors[doc_id][token] = doc_weight
 
+    # Enforce Boolean AND: only keep documents that contain all query tokens.
+    common_docs = set(doc_vectors.keys())
+    for token in query_vector:
+        docs_with_token = {doc_id for doc_id, vec in doc_vectors.items() if token in vec}
+        common_docs &= docs_with_token
+    doc_vectors = {doc_id: vec for doc_id, vec in doc_vectors.items() if doc_id in common_docs}
+    
     # Compute cosine similarity scores.
     doc_scores = compute_doc_scores(query_vector, doc_vectors)
 
-    # Retrieve the top 5 documents based on cosine similarity.
+    # Retrieve the top 5 documents based on the score.
     top_docs = sorted(doc_scores.items(), key=lambda x: x[1], reverse=True)[:5]
-
+    
     for doc_id, score in top_docs:
-        # print(f"Document ID: {doc_id}, Score: {score:.4f}")
+        print(f"Document ID: {doc_id}, Score: {score:.4f}")
         url = retrieve_original_document(doc_id)
-        if url:
-            # print("URL:", url)
-            top_results.append(url)
-        else:
-            print("URL not found for doc_id", doc_id)
+        print("URL:", url)
+        print("-" * 50)
     
     elapsed = (time.perf_counter() - start_time) * 1000  # in milliseconds
     print(f"Elapsed time: {elapsed:.2f} ms")
-
-    return top_results
-
-if __name__ == "__main__":
-    query = input("Type your query and press Enter: ")
-    search(query)
