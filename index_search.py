@@ -26,19 +26,23 @@ def retrieve(word):
     if word not in offset_index:
         return ""
     word_offset = int(offset_index[word])
+    # print(f"{word} found in offset index at byte {word_offset}")
     mem_map.seek(word_offset)
     line = mem_map.readline().decode('utf-8')  # decode bytes to str
     return line
 
 def parse_index_line(line):
+    '''
+    Turns the given line into a set of postings with the idf
+    '''
     line = line.strip()
     if not line:
         return {}, 0.0
     try:
         token_postings, idf_str = line.split(" ; ")
         # Remove token header; we only need postings.
-        _, postings_str = token_postings.split(": ", 1)
-    except ValueError:
+        _, postings_str = token_postings.split(":", 1)
+    except ValueError as e:
         return {}, 0.0
 
     postings = {}
@@ -84,8 +88,10 @@ def retrieve_original_document(doc_id):
     """
     return doc_mapping.get(str(doc_id))
 
-if __name__ == "__main__":
-    query = input("Type your query and press Enter: ")
+# if __name__ == "__main__":
+def search(query):
+    # query = input("Type your query and press Enter: ")
+    results = []
     start_time = time.perf_counter()
     query_tokens = tokenize_query(query)
     query_counts = {}
@@ -130,6 +136,8 @@ if __name__ == "__main__":
         url = retrieve_original_document(doc_id)
         print("URL:", url)
         print("-" * 50)
+        results.append(url)
     
     elapsed = (time.perf_counter() - start_time) * 1000  # in milliseconds
     print(f"Elapsed time: {elapsed:.2f} ms")
+    return results
