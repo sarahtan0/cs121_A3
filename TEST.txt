@@ -1,0 +1,51 @@
+-----GOOD PROMPTS-----
+
+– Iftekhar Ahmed
+
+- machine learning
+
+- ACM
+
+- master of software
+
+- cristina lopes
+
+- chicago chicken
+
+- MSWE
+
+- Rebecca Black
+
+- Roderic Crooks
+
+- Yunan Chen
+
+-----BAD PROMPTS-----
+
+- master of software engineering
+	- Initially poor results: engineering stems to engine, which does not have the same meaning
+	- Attempted fix with different stemmer
+
+- biomedical engineering
+	- Verifying the issue of master of software engineering
+	- Attempted fix with different stemmer
+
+- engineering
+	- Verifying the issue of master of software engineering
+	- Attempted fix with different stemmer
+
+- how to implement a distributed system for processing large scale data in real time using modern frameworks
+	- Initially poor results: too slow due to too many terms being processed
+	- Fixed by memory addressing txt file with a memory map for speed
+
+- intended to teach the principles involved in DBMS implementation, so it will include a significant programming component
+	- Verifying speed issues
+	- Fixed by memory addressing txt file with a memory map for speed
+
+- Cheating is an area where the instructor for this course has absolutely no patience or sympathy whatsoever. You are all here to learn, and cheating defeats that purpose and is unfair to your fellow students. Students will be expected to adhere to the UCI and ICS Academic Honesty policies
+	- Verifying speed issues
+	- Fixed by memory addressing txt file with a memory map for speed
+
+
+
+
