@@ -51,10 +51,12 @@ def parse_index_line(line):
         for item in posting_items:
             if item:
                 try:
-                    doc_id_str, tf_str = item.split(":")
+                    doc_id_str, info = item.split(":", 1)
                     doc_id = int(doc_id_str)
+                    tf_str, pos_str = info.split(":")
                     tf_val = float(tf_str)
-                    postings[doc_id] = tf_val
+                    positions = set(map(int, pos_str.split("|")))
+                    postings[doc_id] = (tf_val, positions)
                 except ValueError:
                     continue
     try:
@@ -88,41 +90,74 @@ def retrieve_original_document(doc_id):
     """
     return doc_mapping.get(str(doc_id))
 
-# if __name__ == "__main__":
 def search(query):
-    # query = input("Type your query and press Enter: ")
     results = []
     start_time = time.perf_counter()
     query_tokens = tokenize_query(query)
     query_counts = {}
     for token in query_tokens:
         query_counts[token] = query_counts.get(token, 0) + 1
+    query_positions = {}
     
     # Build the query vector and the document vectors.
     query_vector = {}
     doc_vectors = {}  
     
+    #calculate vectors for each query word
     for token, count in query_counts.items():
         line = retrieve(token)
         if not line:
             continue  # Token not found in index.
         postings, idf = parse_index_line(line)
+
         # For Boolean search, give each query token a weight equal to its idf.
         query_weight = idf
         query_vector[token] = query_weight
         
         # For each document that contains this token, update its vector.
         for doc_id, tf in postings.items():
-            doc_weight = tf * idf
+            doc_weight = tf[0] * idf
+            positions = tf[1]
             if doc_id not in doc_vectors:
                 doc_vectors[doc_id] = {}
             doc_vectors[doc_id][token] = doc_weight
 
+            if doc_id not in query_positions:
+                query_positions[doc_id] = {}
+            if token not in query_positions[doc_id]:
+                query_positions[doc_id][token] = set()
+            query_positions[doc_id][token].update(positions)
+            # print(f"POSITIONS OF QUERY {token} IN DOC {doc_id}: {query_positions[doc_id][token]}")
+
     # Enforce Boolean AND: only keep documents that contain all query tokens.
     common_docs = set(doc_vectors.keys())
+    prev_token = None
+
     for token in query_vector:
-        docs_with_token = {doc_id for doc_id, vec in doc_vectors.items() if token in vec}
-        common_docs &= docs_with_token
+        docs_with_token = set({doc_id for doc_id, vec in doc_vectors.items() if token in vec})
+        # print(f"CURR TOKEN: {token}")
+
+        #11894
+
+        if prev_token is not None:
+            filtered_docs = set()
+            # print(F"PREV TOKEN: {prev_token}")
+            #loops through docs that have the current token, should check if the previous token exists and THEN if there exists one that's 1 pos before
+            for doc_id in common_docs:
+                if prev_token in query_positions[doc_id] and token in query_positions[doc_id]:
+                    prev_positions = query_positions[doc_id][prev_token]
+                    curr_positions = query_positions[doc_id][token]
+
+                    shorter, longer = (prev_positions, curr_positions) if len(prev_positions) < len(curr_positions) else (curr_positions, prev_positions)
+                    if (shorter == prev_positions and any(pos + 1 in longer for pos in shorter)) or (shorter == curr_positions and any(pos - 1 in longer for pos in shorter)):
+                        # print(f"IN DOC {doc_id}: {token} POS = {curr_positions}\n{prev_token} POS = {prev_positions}")
+                        filtered_docs.add(doc_id)
+            # print(f"ADDING {filtered_docs} TO COMMON DOCS")
+            common_docs &= filtered_docs
+        else:
+            common_docs &= docs_with_token
+        prev_token = token
+        # print(f"DOCS WITH {prev_token} AND {token}: {common_docs}")
     doc_vectors = {doc_id: vec for doc_id, vec in doc_vectors.items() if doc_id in common_docs}
     
     # Compute cosine similarity scores.
@@ -140,4 +175,10 @@ def search(query):
     
     elapsed = (time.perf_counter() - start_time) * 1000  # in milliseconds
     print(f"Elapsed time: {elapsed:.2f} ms")
+    # summaries = generate_all_summaries(top_docs)
+    # return [results, summaries]
     return results
+
+if __name__ == "__main__":
+    query = input("Type your query and press Enter: ")
+    search(query)

@@ -14,7 +14,7 @@ def index():
         if not query:
             return "NOT VALID QUERY"
 
-        results = search(query)  # Run the search function
+        results= search(query)  # Run the search function
 
     if results:
         return render_template('results.html', results=results)

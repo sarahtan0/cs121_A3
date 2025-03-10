@@ -2,13 +2,13 @@ import json
 from bs4 import BeautifulSoup
 import re
 from pathlib import Path
-from nltk.stem import SnowballStemmer
+from nltk.stem import PorterStemmer
 import os
 import heapq
 import math
 
 doc_count = 0
-ps = SnowballStemmer("english")
+ps = PorterStemmer()
 doc_id_to_url = {}
 
 def parse(file):
@@ -44,6 +44,8 @@ def index(json_file, invertedIndex):
     tf_vals = {}
     freq = {}
     important_text = set()
+    positions = {}
+    pos_count = 0
 
     doc_count += 1
     doc_id = doc_count
@@ -54,8 +56,14 @@ def index(json_file, invertedIndex):
     length = len(tokens)
 
     for token in tokens:
+        if doc_count == 11894 and token == "engineering":
+            print(f"ENGINEERING GETTING STEMMED TO {ps.stem(token)}")
+        pos_count += 1
         stem = ps.stem(token)
         freq[stem] = freq.get(stem, 0) + 1
+        if stem not in positions:
+            positions[stem] = []
+        positions[stem].append(pos_count)
 
     for word, count in freq.items():
         tf_vals[word] = count / length
@@ -65,14 +73,14 @@ def index(json_file, invertedIndex):
     for word, tf in tf_vals.items():
         if word not in invertedIndex:
             invertedIndex[word] = []
-        invertedIndex[word].append((doc_id, tf))
+        invertedIndex[word].append((doc_id, tf, {'|'.join(map(str,positions[word]))}))
 
 def buildIndex(dir):
     """
     Returns a list of all the partial indexes created that contain a threshold amount of documents each.
     """
     SAVE_THRESHOLD = 1000
-    max_test_threshold = 4
+    max_test_threshold = 12000
 
     invertedIndex = {}
     file_counter = 0
@@ -107,7 +115,8 @@ def save_index_to_disk(index, filename):
     with open(filename, 'w', encoding='utf-8') as f:
         for token in sorted(index.keys()):
             postings = index[token]
-            postings_str = ", ".join(f"{doc_id}:{tf}" for doc_id, tf in postings)
+            postings_str = ", ".join(f"{doc_id}:{tf}:{'|'.join(map(str, positions))}" for doc_id, tf, positions in postings)
+            print(f"{token} POSTINGS: {postings_str}")
             f.write(f"{token}: {postings_str}\n")
     print(f"Saved index to {filename}")
 
@@ -206,8 +215,8 @@ def create_offset_index(final_index_filename, offset_filename):
     print(f"Offset index saved to {offset_filename}")
 
 def main():
-    # directory = Path("/Users/sarah/Downloads/DEV")
-    directory = Path("/home/ssha2/cs121/cs121_A3/DEV")
+    directory = Path("/Users/sarah/Downloads/DEV")
+    # directory = Path("/home/ssha2/cs121/cs121_A3/DEV")
     partial_indexes = buildIndex(directory)
     
     merge_indexes(partial_indexes, "final_index.txt", "final_offset.json")
