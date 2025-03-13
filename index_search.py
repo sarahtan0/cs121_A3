@@ -135,9 +135,6 @@ def search(query):
 
     for token in query_vector:
         docs_with_token = set({doc_id for doc_id, vec in doc_vectors.items() if token in vec})
-        # print(f"CURR TOKEN: {token}")
-
-        #11894
 
         if prev_token is not None:
             filtered_docs = set()
@@ -156,6 +153,7 @@ def search(query):
             common_docs &= filtered_docs
         else:
             common_docs &= docs_with_token
+        # common_docs &= docs_with_token
         prev_token = token
         # print(f"DOCS WITH {prev_token} AND {token}: {common_docs}")
     doc_vectors = {doc_id: vec for doc_id, vec in doc_vectors.items() if doc_id in common_docs}

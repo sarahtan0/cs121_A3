@@ -1,0 +1,12 @@
+{
+  "name": "cs121_a3",
+  "version": "1.0.0",
+  "description": "Create Index: \t- In the file index.py, modify line [209-210] to the path that you would like the partial indexes to save to (currently set to out own local paths) \t- Run the whole index.py file \t\t- Partial and final index, along with all supporting maps will be created",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
